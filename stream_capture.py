@@ -1,8 +1,10 @@
 import cv2
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import argparse
 import telepot
+import schedule
+import time
+from os import getenv
 
 def get_stream_frame(stream_url: str) -> cv2.UMat:
     '''Get frame from stream'''
@@ -22,30 +24,56 @@ def save_stream_frame(stream_url: str, path: str) -> bool:
     cv2.imwrite(path, frame)
     return True
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--url", help="url to stream")
-    parser.add_argument("-p", "--path", help="path to save image", default="img")
-    parser.add_argument("-t", "--timezone", help="timezone", default="Europe/Moscow")
-    parser.add_argument("-b", "--bot", help="telegram bot token")
-    parser.add_argument("-c", "--chat", help="telegram chat id")
-    args = parser.parse_args()
+def send_stream_frame(stream_url: str, bot: telepot.Bot, chat_id: str) -> bool:
+    '''Send frame from stream by bot'''
+    captured = save_stream_frame(stream_url, 'tmp.jpg')
+    if not captured:
+        return False
+    try:
+        bot.sendPhoto(chat_id, 'tmp.jpg')
+    except Exception as e:
+        print('Error sending photo: ', e)
+        return False
+    return True
 
-    if args.url is None:
-        print("Need stream url")
-        exit(1)
-
-    # Get current datetime
-    dt_string = datetime.now(ZoneInfo(args.timezone)).strftime("%Y-%m-%d__%H-%M")
-
-    # Save image from stream
-    fname = f"{args.path}/{dt_string}.jpg"
-    save_stream_frame(args.url, fname)
-
-    # Send image by bot
-    if args.bot is not None and args.chat is not None:
-        bot = telepot.Bot(args.bot)
+def job(stream_url: str, bot: telepot.Bot, chat_id: str, img_path: str, timezone: str):
+    '''Job for scheduler'''
+    dt_string = datetime.now(ZoneInfo(timezone)).strftime("%Y-%m-%d__%H-%M")
+    fname = f"{img_path}/{dt_string}.jpg"
+    frame = get_stream_frame(stream_url)
+    if frame is not None:
         try:
-            bot.sendPhoto(args.chat, open(fname, 'rb'))
+            cv2.imwrite(fname, frame)
+        except Exception as e:
+            print('Error saving photo: ', e)
+        try:
+            bot.sendPhoto(chat_id, open(fname, 'rb'))
         except Exception as e:
             print('Error sending photo: ', e)
+    else:
+        print("Cannot load stream")
+
+if __name__ == "__main__":
+    # Load environment variables
+    print('Loading environment variables...', end=' ')
+    bot_token = str(getenv('BOT_TOKEN'))
+    chat_id = str(getenv('CHAT_ID'))
+    stream_url = str(getenv('STREAM_URL'))
+    img_path = str(getenv('IMG_PATH'))
+    timezone = str(getenv('TIMEZONE'))
+    capture_time = str(getenv('CAPTURE_TIME'))
+    print('done')
+
+    # Create bot
+    print('Creating bot...', end=' ')
+    bot = telepot.Bot(bot_token)
+    print('done')
+
+    # Schedule
+    schedule.every().day.at(capture_time).do(job, stream_url, bot, chat_id, img_path, timezone)
+
+    # Scheduler
+    print('Starting scheduler...')
+    while True:
+        schedule.run_pending()
+        time.sleep(10)
