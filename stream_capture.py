@@ -45,4 +45,7 @@ if __name__ == "__main__":
     # Send image by bot
     if args.bot is not None and args.chat is not None:
         bot = telepot.Bot(args.bot)
-        bot.sendPhoto(args.chat, open(fname, 'rb'))
+        try:
+            bot.sendPhoto(args.chat, open(fname, 'rb'))
+        except Exception as e:
+            print('Error sending photo: ', e)
