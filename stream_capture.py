@@ -2,6 +2,7 @@ import cv2
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import argparse
+import telepot
 
 def get_stream_frame(stream_url: str) -> cv2.UMat:
     '''Get frame from stream'''
@@ -26,9 +27,22 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--url", help="url to stream")
     parser.add_argument("-p", "--path", help="path to save image", default="img")
     parser.add_argument("-t", "--timezone", help="timezone", default="Europe/Moscow")
+    parser.add_argument("-b", "--bot", help="telegram bot token")
+    parser.add_argument("-c", "--chat", help="telegram chat id")
     args = parser.parse_args()
+
     if args.url is None:
         print("Need stream url")
         exit(1)
+
+    # Get current datetime
     dt_string = datetime.now(ZoneInfo(args.timezone)).strftime("%Y-%m-%d__%H-%M")
-    save_stream_frame(args.url, f"{args.path}/{dt_string}.jpg")
+
+    # Save image from stream
+    fname = f"{args.path}/{dt_string}.jpg"
+    save_stream_frame(args.url, fname)
+
+    # Send image by bot
+    if args.bot is not None and args.chat is not None:
+        bot = telepot.Bot(args.bot)
+        bot.sendPhoto(args.chat, open(fname, 'rb'))
