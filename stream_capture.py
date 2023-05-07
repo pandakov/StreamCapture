@@ -76,6 +76,7 @@ if __name__ == "__main__":
     # Create bot
     print("Creating bot...", end=" ")
     bot = telepot.Bot(bot_token)
+    bot.sendMessage(chat_id, "Bot started")
     print("done")
 
     # Schedule
