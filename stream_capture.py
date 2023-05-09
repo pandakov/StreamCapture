@@ -61,6 +61,10 @@ def job(
         except Exception as e:
             print("Error sending photo: ", e)
     else:
+        try:
+            bot.sendMessage(chat_id, "Cannot load stream")
+        except Exception as e:
+            print("Error sending message: ", e)
         print("Cannot load stream")
 
 
