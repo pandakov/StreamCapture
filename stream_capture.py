@@ -86,6 +86,9 @@ if __name__ == "__main__":
         f"Bot started for capture frames from stream\n\n{stream_url}\n\nevery day at {capture_time} ({timezone})",
     )
     print("done")
+    print("Testing bot...", end=" ")
+    job(stream_url, bot, chat_id, timezone)
+    print("done")
 
     # Schedule
     schedule.every().day.at(capture_time, timezone).do(
