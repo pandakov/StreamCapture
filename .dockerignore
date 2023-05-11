@@ -3,3 +3,4 @@ img/
 config.txt
 .git
 .gitignore
+.env
