@@ -49,7 +49,7 @@ def send_stream_frame(stream_url: str, bot: telepot.Bot, chat_id: str) -> bool:
 def get_capture(
     stream_url: str,
     bot: telepot.Bot,
-    chat_id: str,
+    chat_ids: list[str],
     timezone: str = "Europe/Moscow",
     img_path: str = "img",
 ):
@@ -57,24 +57,25 @@ def get_capture(
     dt_string = datetime.now(ZoneInfo(timezone)).strftime("%Y-%m-%d__%H-%M")
     fname = f"{img_path}/{dt_string}.jpg"
     captured = save_stream_frame(stream_url, fname)
-    if captured:
-        try:
-            bot.sendPhoto(chat_id, open(fname, "rb"))
-        except Exception as e:
-            print("Error sending photo: ", e)
-    else:
-        try:
-            bot.sendMessage(chat_id, "Cannot load stream")
-        except Exception as e:
-            print("Error sending message: ", e)
-        print("Cannot load stream")
+    for chat_id in chat_ids:
+        if captured:
+            try:
+                bot.sendPhoto(chat_id, open(fname, "rb"))
+            except Exception as e:
+                print("Error sending photo: ", e)
+        else:
+            try:
+                bot.sendMessage(chat_id, "Cannot load stream")
+            except Exception as e:
+                print("Error sending message: ", e)
+            print("Cannot load stream")
 
 
 if __name__ == "__main__":
     # Load environment variables
     print("Loading environment variables...", end=" ")
     bot_token = str(getenv("BOT_TOKEN"))
-    chat_id = str(getenv("CHAT_ID"))
+    chat_ids = str(getenv("CHAT_ID")).split(",")
     stream_url = str(getenv("STREAM_URL"))
     capture_time = str(getenv("CAPTURE_TIME"))
     print("done")
@@ -82,14 +83,15 @@ if __name__ == "__main__":
     # Create bot
     print("Creating bot...", end=" ")
     bot = telepot.Bot(bot_token)
-    bot.sendMessage(
-        chat_id,
-        f"Bot started for capture frames from stream\n\n{stream_url}\n\nevery day at {capture_time} (UTC)",
-    )
+    for chat in chat_ids:
+        bot.sendMessage(
+            chat,
+            f"Bot started for capture frames from stream\n\n{stream_url}\n\nevery day at {capture_time} (UTC)",
+        )
     print("done")
 
     # Create job for scheduler
-    job = partial(get_capture, stream_url, bot, chat_id)
+    job = partial(get_capture, stream_url, bot, chat_ids)
 
     # Test job
     print("Testing bot...")
